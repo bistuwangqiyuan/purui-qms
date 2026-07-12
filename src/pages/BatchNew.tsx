@@ -17,7 +17,11 @@ export default function BatchNew() {
   const [supplier, setSupplier] = useState('');
   const [supplierLotNo, setSupplierLotNo] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [arrivalDate, setArrivalDate] = useState(() => new Date().toISOString().slice(0, 10));
+  const [arrivalDate, setArrivalDate] = useState(() => {
+    // 本地时区日期（toISOString 为 UTC，凌晨会差一天）
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [poNo, setPoNo] = useState('');
   const [project, setProject] = useState('');
 

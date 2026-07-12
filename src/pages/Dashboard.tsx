@@ -23,12 +23,12 @@ export default function Dashboard() {
     const totals = months.map((m) => stats.byMonth[m].total);
     return {
       tooltip: { trigger: 'axis' as const },
-      legend: { data: ['批合格率(%)', '检验批数'] },
-      grid: { left: 48, right: 48, top: 40, bottom: 28 },
+      legend: { data: ['批合格率(%)', '检验批数'], top: 0 },
+      grid: { left: 52, right: 52, top: 56, bottom: 28 },
       xAxis: { type: 'category' as const, data: months },
       yAxis: [
-        { type: 'value' as const, name: '合格率(%)', min: 0, max: 100 },
-        { type: 'value' as const, name: '批数', minInterval: 1 },
+        { type: 'value' as const, name: '合格率(%)', min: 0, max: 100, nameGap: 18 },
+        { type: 'value' as const, name: '批数', minInterval: 1, nameGap: 18 },
       ],
       series: [
         { name: '批合格率(%)', type: 'line' as const, data: rates, smooth: true, symbolSize: 8, lineStyle: { width: 3 }, itemStyle: { color: '#0e77b4' } },
@@ -53,8 +53,8 @@ export default function Dashboard() {
           return `${p.name}<br/>批合格率：${p.value}%（${s.passed}/${s.total} 批）`;
         },
       },
-      grid: { left: 8, right: 40, top: 16, bottom: 28, containLabel: true },
-      xAxis: { type: 'value' as const, max: 100, name: '%' },
+      grid: { left: 8, right: 44, top: 16, bottom: 8, containLabel: true },
+      xAxis: { type: 'value' as const, max: 100, axisLabel: { show: false }, splitLine: { show: false } },
       yAxis: { type: 'category' as const, data: names, axisLabel: { width: 150, overflow: 'truncate' as const } },
       series: [{
         type: 'bar' as const,

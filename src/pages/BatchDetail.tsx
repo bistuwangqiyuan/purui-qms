@@ -162,6 +162,13 @@ function InspectionForm({ batch, type, onDone }: { batch: Batch; type: Component
     setError('');
     try {
       for (const f of Array.from(files)) {
+        // base64 膨胀约 37%，超过 3MB 的文件经编码后将超出函数载荷限制
+        if (f.size > 3 * 1024 * 1024) {
+          throw new Error(`照片"${f.name}"为 ${(f.size / 1024 / 1024).toFixed(1)} MB，超过 3 MB 限制，请压缩后上传`);
+        }
+        if (!f.type.startsWith('image/')) {
+          throw new Error(`"${f.name}"不是图片文件`);
+        }
         const pid = await api.uploadAttachment(f);
         setPhotos((p) => [...p, { id: pid, name: f.name }]);
       }

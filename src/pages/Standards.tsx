@@ -65,8 +65,21 @@ const IMAGES = [
 
 export default function Standards() {
   const [types, setTypes] = useState<ComponentType[]>([]);
+  const [loadError, setLoadError] = useState('');
   useEffect(() => {
-    api.componentTypes().then(setTypes).catch(() => {});
+    let cancelled = false;
+    const load = (retry: number) => {
+      api
+        .componentTypes()
+        .then((t) => { if (!cancelled) setTypes(t); })
+        .catch((e) => {
+          if (cancelled) return;
+          if (retry > 0) setTimeout(() => load(retry - 1), 1500);
+          else setLoadError(e instanceof Error ? e.message : '加载失败');
+        });
+    };
+    load(2);
+    return () => { cancelled = true; };
   }, []);
 
   return (
@@ -125,6 +138,7 @@ export default function Standards() {
 
       <div className="card">
         <h2>组部件检验模板一览（{types.length} 类）</h2>
+        {loadError && <div className="alert error">检验模板加载失败：{loadError}，请刷新页面重试</div>}
         {types.map((t) => (
           <details key={t.id} style={{ marginBottom: 8 }}>
             <summary style={{ cursor: 'pointer', fontWeight: 600 }}>

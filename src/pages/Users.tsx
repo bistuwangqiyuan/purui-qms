@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Role, User } from '../../shared/types';
 import { ROLE_NAMES } from '../../shared/types';
@@ -14,6 +14,8 @@ export default function Users() {
   const [role, setRole] = useState<Role>('inspector');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resetFor, setResetFor] = useState<string | null>(null);
+  const [resetPw, setResetPw] = useState('');
 
   const load = useCallback(() => {
     api.users().then(setUsers).catch((e) => setError(e.message));
@@ -45,13 +47,18 @@ export default function Users() {
     }
   }
 
-  async function resetPassword(u: User) {
-    const pw = window.prompt(`为用户 ${u.username} 设置新密码（至少 8 位）：`);
-    if (!pw) return;
+  async function confirmReset() {
+    if (!resetFor) return;
     setError(''); setOk('');
+    if (resetPw.length < 8) {
+      setError('新密码至少 8 位');
+      return;
+    }
     try {
-      await api.updateUser(u.username, { password: pw });
-      setOk(`用户 ${u.username} 密码已重置`);
+      await api.updateUser(resetFor, { password: resetPw });
+      setOk(`用户 ${resetFor} 密码已重置`);
+      setResetFor(null);
+      setResetPw('');
     } catch (err) {
       setError(err instanceof Error ? err.message : '操作失败');
     }
@@ -81,16 +88,45 @@ export default function Users() {
               </thead>
               <tbody>
                 {users.map((u) => (
-                  <tr key={u.id}>
-                    <td>{u.username}</td>
-                    <td>{u.name}</td>
-                    <td><span className="badge blue">{ROLE_NAMES[u.role]}</span></td>
-                    <td>{u.active ? <span className="badge green">启用</span> : <span className="badge gray">停用</span>}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn sm" onClick={() => toggleActive(u)}>{u.active ? '停用' : '启用'}</button>{' '}
-                      <button className="btn sm" onClick={() => resetPassword(u)}>重置密码</button>
-                    </td>
-                  </tr>
+                  <React.Fragment key={u.id}>
+                    <tr>
+                      <td>{u.username}</td>
+                      <td>{u.name}</td>
+                      <td><span className="badge blue">{ROLE_NAMES[u.role]}</span></td>
+                      <td>{u.active ? <span className="badge green">启用</span> : <span className="badge gray">停用</span>}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <button className="btn sm" onClick={() => toggleActive(u)}>{u.active ? '停用' : '启用'}</button>{' '}
+                        <button
+                          className="btn sm"
+                          onClick={() => {
+                            setResetFor(resetFor === u.username ? null : u.username);
+                            setResetPw('');
+                          }}
+                        >
+                          重置密码
+                        </button>
+                      </td>
+                    </tr>
+                    {resetFor === u.username && (
+                      <tr>
+                        <td colSpan={5} style={{ background: '#f8fbfd' }}>
+                          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: 13 }}>为 <strong>{u.username}</strong> 设置新密码：</span>
+                            <input
+                              type="password"
+                              value={resetPw}
+                              onChange={(e) => setResetPw(e.target.value)}
+                              placeholder="至少 8 位"
+                              style={{ maxWidth: 200 }}
+                              autoFocus
+                            />
+                            <button className="btn sm primary" onClick={confirmReset}>确认重置</button>
+                            <button className="btn sm" onClick={() => { setResetFor(null); setResetPw(''); }}>取消</button>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
                 ))}
               </tbody>
             </table>

@@ -85,7 +85,10 @@ const DEMO_USERS: { username: string; name: string; role: Role; password: string
 ];
 
 /** 播种版本：修改演示数据后递增，触发重新播种（并清理旧演示/测试数据） */
-const SEED_VERSION = 'v3';
+const SEED_VERSION = 'v5';
+
+/** 自动化测试/边界测试使用的供应商名，播种时一并清理 */
+const TEST_SUPPLIERS = new Set(['自动化测试供应商', '边界测试', '上海测试供应商UI']);
 
 async function ensureSeed(): Promise<void> {
   const us = usersStore();
@@ -117,7 +120,7 @@ async function ensureSeed(): Promise<void> {
   );
   for (let i = 0; i < blobs.length; i++) {
     const old = olds[i];
-    if (old?.demo || old?.supplier === '自动化测试供应商') await bs.delete(blobs[i].key);
+    if (old?.demo || (old && TEST_SUPPLIERS.has(old.supplier))) await bs.delete(blobs[i].key);
   }
   for (const b of buildDemoBatches()) {
     await bs.setJSON(`batch-${b.id}`, b);

@@ -65,6 +65,9 @@ python scripts/verify_sampling.py
 node scripts/e2e-test.mjs http://localhost:7777
 ```
 
+> 注意：对生产环境运行 e2e 会留下"自动化测试供应商"批次与 `e2e_*` 用户。
+> 递增 `netlify/functions/api.ts` 中的 `SEED_VERSION` 并重新部署即可自动清理。
+
 ## 部署
 
 ```bash

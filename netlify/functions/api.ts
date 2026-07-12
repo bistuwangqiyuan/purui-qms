@@ -28,9 +28,10 @@ function jwtSecret(): Uint8Array {
   return enc.encode(s);
 }
 
-const usersStore = () => getStore('qms-users');
-const batchStore = () => getStore('qms-batches');
-const fileStore = () => getStore('qms-attachments');
+// strong 一致性：保证写后立读（登录、审核、台账列表）拿到最新数据
+const usersStore = () => getStore({ name: 'qms-users', consistency: 'strong' });
+const batchStore = () => getStore({ name: 'qms-batches', consistency: 'strong' });
+const fileStore = () => getStore({ name: 'qms-attachments', consistency: 'strong' });
 
 function json(data: unknown, status = 200): Response {
   return new Response(JSON.stringify(data), {
@@ -83,13 +84,17 @@ const DEMO_USERS: { username: string; name: string; role: Role; password: string
   { username: 'inspector', name: '简检验（检验员）', role: 'inspector', password: 'Insp@123' },
 ];
 
-/** 播种版本：修改演示数据后递增，触发重新播种 */
-const SEED_VERSION = 'v2';
+/** 播种版本：修改演示数据后递增，触发重新播种（并清理旧演示/测试数据） */
+const SEED_VERSION = 'v3';
 
 async function ensureSeed(): Promise<void> {
   const us = usersStore();
   const flag = await us.get('__seeded__', { type: 'text' });
   if (flag === SEED_VERSION) return;
+
+  // 清理自动化测试残留用户
+  const userList = await us.list({ prefix: 'user-e2e_' });
+  for (const b of userList.blobs) await us.delete(b.key);
 
   for (const d of DEMO_USERS) {
     const u: UserWithHash = {
@@ -105,13 +110,14 @@ async function ensureSeed(): Promise<void> {
   }
 
   const bs = batchStore();
-  // 清理旧演示批次后重新播种，保证演示数据与代码一致
+  // 清理旧演示批次与自动化测试残留后重新播种，保证演示数据与代码一致
   const { blobs } = await bs.list({ prefix: 'batch-' });
   const olds = await Promise.all(
     blobs.map((b) => bs.get(b.key, { type: 'json' }) as Promise<Batch>),
   );
   for (let i = 0; i < blobs.length; i++) {
-    if (olds[i]?.demo) await bs.delete(blobs[i].key);
+    const old = olds[i];
+    if (old?.demo || old?.supplier === '自动化测试供应商') await bs.delete(blobs[i].key);
   }
   for (const b of buildDemoBatches()) {
     await bs.setJSON(`batch-${b.id}`, b);

@@ -76,10 +76,12 @@ export default function Login() {
             {busy ? '登录中…' : '登 录'}
           </button>
           <div className="demo-accounts">
-            <div style={{ fontWeight: 600, color: 'var(--ink-2)', marginBottom: 4 }}>演示账号（角色分离）</div>
+            <div style={{ fontWeight: 600, color: 'var(--ink-2)', marginBottom: 4 }}>演示账号（角色与用户类型分离）</div>
             <div>检验员：<code>inspector</code> / <code>Insp@123</code></div>
             <div>质量工程师：<code>qe</code> / <code>Qe@123456</code></div>
             <div>管理员：<code>admin</code> / <code>Admin@123</code></div>
+            <div>供应商协同：<code>supplier1</code> / <code>Sup@12345</code></div>
+            <div>客户（客诉）：<code>customer1</code> / <code>Cus@12345</code></div>
           </div>
         </form>
       </div>

@@ -1,0 +1,14 @@
+{
+  "name": "普瑞QMS · 换流阀质量管理系统",
+  "short_name": "普瑞QMS",
+  "description": "换流阀产品组部件质量管理系统：来料/过程/出货检验、不合格品、客诉、CAPA、评审、SPC",
+  "lang": "zh-CN",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#102434",
+  "theme_color": "#0d5c8c",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -185,6 +185,49 @@ input:focus, select:focus, textarea:focus { outline: 2px solid rgba(14,119,180,0
 }
 .timeline .t { font-size: 12px; color: var(--ink-3); }
 
+/* ---------- 移动端导航 ---------- */
+.mobile-nav-toggle { display: none; }
+@media (max-width: 860px) {
+  .mobile-nav-toggle {
+    display: block; position: fixed; top: 10px; left: 10px; z-index: 60;
+    background: var(--sidebar); color: #fff; border: none; border-radius: 8px;
+    padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  .sidebar {
+    position: fixed; left: 0; top: 0; z-index: 50; transform: translateX(-100%);
+    transition: transform 0.2s ease; box-shadow: 4px 0 20px rgba(0,0,0,0.3);
+  }
+  .sidebar.open { transform: translateX(0); }
+  .main { padding: 56px 14px 40px; }
+}
+
+/* ---------- 页签 ---------- */
+.tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--line); margin-bottom: 16px; flex-wrap: wrap; }
+.tabs button {
+  border: none; background: none; padding: 8px 16px; font-size: 13.5px; cursor: pointer;
+  color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -2px; font-family: inherit;
+}
+.tabs button.active { color: var(--brand); border-bottom-color: var(--brand); font-weight: 600; }
+
+/* ---------- 模态 ---------- */
+.modal-mask {
+  position: fixed; inset: 0; background: rgba(16,36,52,0.45); z-index: 100;
+  display: flex; align-items: flex-start; justify-content: center; padding: 40px 16px; overflow-y: auto;
+}
+.modal {
+  background: #fff; border-radius: 12px; padding: 22px 24px; width: 100%; max-width: 720px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+}
+.modal h2 { margin-bottom: 14px; }
+.modal .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+/* ---------- 追溯链 ---------- */
+.trace-section { margin-bottom: 6px; }
+.trace-section .sec-title {
+  font-size: 13px; font-weight: 700; color: var(--brand); margin: 12px 0 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+
 /* ---------- 打印报告 ---------- */
 @media print {
   .sidebar, .no-print { display: none !important; }

@@ -134,6 +134,52 @@ export function resolvePlan(letter: string, aql: number): { effectiveIndex: numb
   return { effectiveIndex: effIndex, ac };
 }
 
+import type { SamplingConfig } from './types';
+
+/**
+ * 按检验标准的抽样配置生成方案（三种方式）：
+ * - aql：GB/T 2828.1-2012 检索（本文件核心实现）
+ * - fixed：固定数量抽样（企业自定方案，Ac 由标准指定，默认 0）
+ * - percent：百分比抽样（样本量 = ceil(N × percent%)，Ac 由标准指定，默认 0）
+ */
+export function getSamplingPlanByConfig(lotSize: number, cfg: SamplingConfig): SamplingPlan {
+  if (cfg.mode === 'fixed') {
+    const n = Math.max(1, Math.floor(cfg.fixedN ?? 5));
+    const sampleSize = Math.min(n, lotSize);
+    const ac = Math.max(0, Math.floor(cfg.fixedAc ?? 0));
+    return {
+      mode: 'fixed',
+      lotSize,
+      aql: 0,
+      codeLetter: '-',
+      effectiveLetter: '-',
+      sampleSize,
+      ac,
+      re: ac + 1,
+      fullInspection: sampleSize >= lotSize,
+    };
+  }
+  if (cfg.mode === 'percent') {
+    const pct = Math.min(100, Math.max(0.1, cfg.percent ?? 10));
+    const sampleSize = Math.min(lotSize, Math.max(1, Math.ceil((lotSize * pct) / 100)));
+    const ac = Math.max(0, Math.floor(cfg.percentAc ?? 0));
+    return {
+      mode: 'percent',
+      lotSize,
+      aql: 0,
+      codeLetter: '-',
+      effectiveLetter: '-',
+      sampleSize,
+      ac,
+      re: ac + 1,
+      fullInspection: sampleSize >= lotSize,
+    };
+  }
+  const plan = getSamplingPlan(lotSize, cfg.aql ?? 1.0);
+  plan.mode = 'aql';
+  return plan;
+}
+
 /** 生成完整抽样方案：批量 + AQL → 字码、样本量、Ac/Re */
 export function getSamplingPlan(lotSize: number, aql: number): SamplingPlan {
   const codeLetter = codeLetterForLot(lotSize);

@@ -32,7 +32,7 @@ import { getSamplingPlan } from '../../shared/sampling';
 import { COMPONENT_TYPES, DEMO_SUPPLIERS } from '../../shared/masterdata';
 import { batchStore, dataStore, listByPrefix, putEntity, usersStore } from './lib';
 
-const SEED_VERSION = 'v7';
+const SEED_VERSION = 'v8';
 
 /** 自动化测试/边界测试使用的供应商名，播种时一并清理 */
 const TEST_SUPPLIERS = new Set(['自动化测试供应商', '边界测试', '上海测试供应商UI', 'E2E测试供应商']);

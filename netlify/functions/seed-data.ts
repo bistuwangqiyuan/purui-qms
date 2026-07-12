@@ -32,7 +32,7 @@ import { getSamplingPlan } from '../../shared/sampling';
 import { COMPONENT_TYPES, DEMO_SUPPLIERS } from '../../shared/masterdata';
 import { batchStore, dataStore, listByPrefix, putEntity, usersStore } from './lib';
 
-const SEED_VERSION = 'v5';
+const SEED_VERSION = 'v7';
 
 /** 自动化测试/边界测试使用的供应商名，播种时一并清理 */
 const TEST_SUPPLIERS = new Set(['自动化测试供应商', '边界测试', '上海测试供应商UI', 'E2E测试供应商']);
@@ -477,66 +477,79 @@ export async function ensureSeed(): Promise<void> {
   const flag = await us.get('__seeded__', { type: 'text' });
   if (flag === SEED_VERSION) return;
 
+  // 先置版本标记，避免并发请求同时播种造成竞态（若播种中断可手动清除标记或递增版本重试）
+  await us.set('__seeded__', SEED_VERSION);
+
   // 清理自动化测试残留用户
   const userList = await us.list({ prefix: 'user-e2e_' });
-  for (const b of userList.blobs) await us.delete(b.key);
+  await Promise.all(userList.blobs.map((b) => us.delete(b.key)));
 
-  // 清理旧演示/测试业务数据（保留真实数据）
+  // 清理旧演示/测试业务数据（保留真实数据）——全部并行以避免函数超时
   const ds = dataStore();
   const prefixes = ['material-', 'partner-', 'unit-', 'defect-', 'method-', 'standard-', 'patrol-', 'ncr-', 'complaint-', 'capa-', 'issue-', 'checklist-', 'audit-', 'testtpl-', 'test-', 'gauge-', 'cost-', 'message-'];
-  for (const prefix of prefixes) {
-    const { blobs } = await ds.list({ prefix });
-    for (const b of blobs) {
-      const item = (await ds.get(b.key, { type: 'json' })) as { demo?: boolean } | null;
-      const isE2e = item && JSON.stringify(item).includes('E2E');
-      if (item?.demo || isE2e || prefix === 'message-') await ds.delete(b.key);
-    }
-  }
+  await Promise.all(
+    prefixes.map(async (prefix) => {
+      const { blobs } = await ds.list({ prefix });
+      await Promise.all(
+        blobs.map(async (b) => {
+          const item = (await ds.get(b.key, { type: 'json' })) as { demo?: boolean } | null;
+          const isE2e = item && JSON.stringify(item).includes('E2E');
+          if (item?.demo || isE2e || prefix === 'message-') await ds.delete(b.key);
+        }),
+      );
+    }),
+  );
   const bs = batchStore();
   {
     const { blobs } = await bs.list({ prefix: 'batch-' });
-    for (const b of blobs) {
-      const old = (await bs.get(b.key, { type: 'json' })) as Batch | null;
-      const isE2e = old && (old.batchNo.includes('E2E') || old.line === 'E2E产线' || JSON.stringify(old).includes('E2E'));
-      if (old?.demo || isE2e || (old && TEST_SUPPLIERS.has(old.supplier))) await bs.delete(b.key);
-    }
+    await Promise.all(
+      blobs.map(async (b) => {
+        const old = (await bs.get(b.key, { type: 'json' })) as Batch | null;
+        const isE2e = old && (old.batchNo.includes('E2E') || old.line === 'E2E产线' || JSON.stringify(old).includes('E2E'));
+        if (old?.demo || isE2e || (old && TEST_SUPPLIERS.has(old.supplier))) await bs.delete(b.key);
+      }),
+    );
   }
 
-  // 主数据
+  // 主数据（并行写入）
   const partners = buildPartners();
-  for (const p of partners) await putEntity('partner-', p.id, p);
   const { standards, materials } = buildStandardsAndMaterials();
-  for (const s of standards) await putEntity('standard-', s.id, s);
-  for (const m of materials) await putEntity('material-', m.id, m);
-  for (const u of UNITS) {
-    const id = crypto.randomUUID();
-    await putEntity('unit-', id, { ...u, id });
-  }
-  for (const d of DEFECTS) {
-    const id = crypto.randomUUID();
-    await putEntity('defect-', id, { ...d, id });
-  }
-  for (const m of METHODS) {
-    const id = crypto.randomUUID();
-    await putEntity('method-', id, { ...m, id });
-  }
+  await Promise.all([
+    ...partners.map((p) => putEntity('partner-', p.id, p)),
+    ...standards.map((s) => putEntity('standard-', s.id, s)),
+    ...materials.map((m) => putEntity('material-', m.id, m)),
+    ...UNITS.map((u) => {
+      const id = crypto.randomUUID();
+      return putEntity('unit-', id, { ...u, id });
+    }),
+    ...DEFECTS.map((d) => {
+      const id = crypto.randomUUID();
+      return putEntity('defect-', id, { ...d, id });
+    }),
+    ...METHODS.map((m) => {
+      const id = crypto.randomUUID();
+      return putEntity('method-', id, { ...m, id });
+    }),
+  ]);
 
   // 用户（含供应商/客户演示账号）
-  for (const d of DEMO_USERS) {
-    const partner = d.partnerCode ? partners.find((p) => p.code === d.partnerCode) : undefined;
-    const u: UserWithHash = {
-      id: crypto.randomUUID(),
-      username: d.username,
-      name: d.name,
-      role: d.role,
-      userType: d.userType ?? 'internal',
-      partnerId: partner?.id,
-      active: true,
-      createdAt: new Date().toISOString(),
-      passwordHash: bcrypt.hashSync(d.password, 10),
-    };
-    await us.setJSON(`user-${d.username}`, u);
-  }
+  await Promise.all(
+    DEMO_USERS.map((d) => {
+      const partner = d.partnerCode ? partners.find((p) => p.code === d.partnerCode) : undefined;
+      const u: UserWithHash = {
+        id: crypto.randomUUID(),
+        username: d.username,
+        name: d.name,
+        role: d.role,
+        userType: d.userType ?? 'internal',
+        partnerId: partner?.id,
+        active: true,
+        createdAt: new Date().toISOString(),
+        passwordHash: bcrypt.hashSync(d.password, 10),
+      };
+      return us.setJSON(`user-${d.username}`, u);
+    }),
+  );
 
   // 业务演示数据
   const ctx: SeedCtx = {
@@ -547,11 +560,8 @@ export async function ensureSeed(): Promise<void> {
     standards,
   };
   const batches = buildDemoBatches(ctx);
-  for (const b of batches) await bs.setJSON(`batch-${b.id}`, b);
-  await seedQualityChain(ctx, batches);
-  await seedSystemData();
-
-  await us.set('__seeded__', SEED_VERSION);
+  await Promise.all(batches.map((b) => bs.setJSON(`batch-${b.id}`, b)));
+  await Promise.all([seedQualityChain(ctx, batches), seedSystemData()]);
 }
 
 /** 兼容旧引用 */

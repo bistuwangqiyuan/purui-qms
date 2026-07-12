@@ -1,0 +1,14 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[dev]
+  command = "npm run dev"
+  targetPort = 5199
+  port = 8899
+
+[functions]
+  node_bundler = "esbuild"
+
+# SPA fallback 位于 public/_redirects（构建时复制到 dist），
+# 不放在此处是为了避免 netlify dev 将 Vite 模块请求重写为 /index.html。
